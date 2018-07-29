@@ -1,0 +1,52 @@
+name:                problem4
+version:             0.1.0.0
+github:              "maruks/first-missing-integer-rust"
+license:             BSD3
+author:              "Maris Orbidans"
+maintainer:          "maris.orbidans@gmail.com"
+copyright:           "2018 Maris Orbidans"
+
+extra-source-files:
+- README.md
+- ChangeLog.md
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Web
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:         Please see the README on GitHub at <https://github.com/githubuser/problem4#readme>
+
+dependencies:
+- base >= 4.7 && < 5
+- array
+- text
+
+library:
+  source-dirs: src
+
+executables:
+  problem4-exe:
+    main:                Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - problem4
+
+tests:
+  problem4-test:
+    main:                Spec.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - problem4
+    - hspec
+    - QuickCheck
