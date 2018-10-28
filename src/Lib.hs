@@ -1,62 +1,44 @@
-{-# LANGUAGE OverloadedStrings #-}
-module Lib (lowestIntegerNotInList) where
+module Lib
+  ( lowestIntegerNotInList
+  ) where
 
-import Data.Int
-import Data.Array.Unboxed
-import Data.Array.ST (STUArray, readArray, writeArray)
-import Data.Array.IO (IOUArray)
+import Data.Array.Base (STUArray)
+import Data.Array.Unboxed (UArray, (!), bounds)
+import Data.Array.ST
+       (readArray, writeArray, runSTUArray, newListArray)
+
+import Control.Monad.ST (ST)
 import Control.Monad (when, forM_)
-import Data.Array.MArray (newArray)
 
-import Data.Text (Text)
-import qualified Data.Text.IO as TIO
-import qualified Data.Text.Read as R
+replace :: STUArray s Int Int -> Int -> Int -> ST s ()
+replace stuArray index size =
+  when (index > 0 && index <= size) $
+  do val <- readArray stuArray index
+     when (val /= index) $
+       do writeArray stuArray index index
+          replace stuArray val size
 
-signed :: Text -> Int32
-signed text =
-  case R.signed R.decimal text of
-    Left e -> error e
-    Right (i, _) -> i
+missingInt' :: Int -> Int -> UArray Int Int -> Int
+missingInt' index size uArray
+  | index <= size =
+    if uArray ! index /= index
+      then index
+      else missingInt' (index + 1) size uArray
+  | otherwise = 1 + size
 
-decimal :: Text -> Int
-decimal text =
-  case R.decimal text of
-    Left e -> error e
-    Right (i, _) -> i
+missingInt :: UArray Int Int -> Int
+missingInt uArray =
+  let (i, s) = bounds uArray
+  in missingInt' i s uArray
 
-readInput :: IO Text
-readInput = TIO.getLine
-
-createNewArray :: Int -> IO (IOUArray Int Int32)
-createNewArray size = newArray (1, size) 0
-
-replace :: IOUArray Int Int32 -> Int -> Int -> IO ()
-replace stArr idx size =
-  when (idx > 0 && idx <= size) $ do
-    val <- readArray stArr idx
-    when (val /= fromIntegral idx) $ do
-      writeArray stArr idx $ fromIntegral idx
-      replace stArr (fromIntegral val) size
-
-missingInt :: Int -> Int -> IOUArray Int Int32 -> IO Int32
-missingInt i s xs =
-  if i <= s then do
-    val <- readArray xs i
-    if val /= fromIntegral i then return $ fromIntegral i else missingInt (i + 1) s xs
-    else return $ fromIntegral $ 1 + s
-
-lowestIntegerNotInList :: IO Int32
-lowestIntegerNotInList = do
-  size <- decimal <$> readInput
-  stArr <- createNewArray size
-
-  forM_ [1 .. size] $ \idx -> do
-    i <- signed <$> readInput
-    writeArray stArr idx i
-
-  forM_ [1 .. size] $ \idx -> do
-    val <- readArray stArr idx
-    when (val /= fromIntegral idx) $
-      replace stArr (fromIntegral val) size
-
-  missingInt 1 size stArr
+lowestIntegerNotInList :: [Int] -> Int
+lowestIntegerNotInList xs =
+  missingInt $
+  runSTUArray $
+  do let size = length xs
+     stuArray <- newListArray (1, size) xs
+     forM_ [1 .. size] $
+       \i -> do
+         val <- readArray stuArray i
+         when (val /= i) $ replace stuArray val size
+     return stuArray
